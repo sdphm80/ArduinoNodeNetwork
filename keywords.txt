@@ -1,0 +1,24 @@
+#######################################
+# Syntax Coloring Map For Ultrasound
+#######################################
+
+#######################################
+# Datatypes (KEYWORD1)
+#######################################
+
+ArduinoNodeNetwork	KEYWORD1
+
+#######################################
+# Methods and Functions (KEYWORD2)
+#######################################
+SendNew	KEYWORD2
+SendReply	KEYWORD2
+GetPayloadPointer	KEYWORD2
+GetNextRequestPacket	KEYWORD2
+Update	KEYWORD2
+SerialRecieved	KEYWORD2
+
+#######################################
+# Constants (LITERAL1)
+#######################################
+
