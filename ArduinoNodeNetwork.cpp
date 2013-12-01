@@ -1,5 +1,10 @@
 #include <ArduinoNodeNetwork.h>
 
+#define RS_485_CONTROL_PIN 3
+#define RS_485_LISTEN 0
+#define RS_485_WRITE 1
+#define SERIAL_LISTEN_TRAFFIC_PIN 2
+
 //*****************************************************
 // ArduinoNodeNetwork 
 //
@@ -11,7 +16,12 @@ ArduinoNodeNetwork::ArduinoNodeNetwork(){
   lastTimeUpdated = millis();
 
   //INIT Packet buffers
-  for (byte i=0; i<PACKET_MAX; i++){ ClearPacket( i ); } 
+  for (byte i=0; i<PACKET_MAX; i++){ ClearPacket( i ); }
+
+  //INIT RS485 Chip Pin Control & Listener
+  pinMode(RS_485_CONTROL_PIN, OUTPUT);
+  digitalWrite(RS_485_CONTROL_PIN, RS_485_LISTEN);
+  pinMode(SERIAL_LISTEN_TRAFFIC_PIN, INPUT);
 }
 
 //*****************************************************
@@ -93,14 +103,15 @@ return pNum;
 //*****************************************************
 void ArduinoNodeNetwork::Update(){
 
-//Only check for transmit according to PACKET_TRANS_DELAY
-if (lastTimeUpdated + PACKET_TRANS_DELAY > millis()){ return; }
-lastTimeUpdated = millis();
+  //Only check for transmit according to PACKET_TRANS_DELAY
+  if (lastTimeUpdated + PACKET_TRANS_DELAY > millis()){ return; }
 
-//Look for packets that need to be transmitted and send them
-for (byte i=0; i<PACKET_MAX; i++){
-  if (packet[i].isUsed == true && packet[i].to != myId){ SendPacket( i ); } 
-} 
+
+  //Look for packets that need to be transmitted and send them
+  for (byte i=0; i<PACKET_MAX; i++){
+    if (packet[i].isUsed == true && packet[i].to != myId){ SendPacket( i ); } 
+  }
+  lastTimeUpdated = millis();
 }
 
 
@@ -205,10 +216,26 @@ void ArduinoNodeNetwork::SendPacket(byte pNum){
   packetHeader[10] = ':';
   packetHeader[11] = '\0';
   
-  //Wait for serial buss to be free and send
-  WaitForSerialBusFree();
+  
+  //Wait for serial buss to be free
+  int isClearCount = 0;
+  while (isClearCount < 12){
+    if (digitalRead(SERIAL_LISTEN_TRAFFIC_PIN) == LOW){
+      isClearCount = 0;
+    }else{
+      isClearCount ++;
+    }
+    delay(1);
+  }
+	
+  //Send The packet
+  digitalWrite(RS_485_CONTROL_PIN, RS_485_WRITE);
+  delay(1);
   Serial.print( packetHeader );
   Serial.println( packet[pNum].payload );
+  Serial.flush();
+  delay(1);
+  digitalWrite(RS_485_CONTROL_PIN, RS_485_LISTEN);
   
   //Handle post send packet actions
   if ( packet[pNum].type == 'A' ){ ClearPacket( pNum ); }
@@ -321,14 +348,6 @@ void ArduinoNodeNetwork::EncodeHexToBuff(byte num, char * buff, byte offset){
 }
 
 
-//*****************************************************
-// WaitForSerialBusFree
-//
-// Waits for activity to stop on the serial bus
-//*****************************************************
-void ArduinoNodeNetwork::WaitForSerialBusFree(){
-  //TODO!!
-  delay(0);
-} 
+
 
 
